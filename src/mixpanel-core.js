@@ -10,20 +10,20 @@
  * Released under the MIT License.
  */
 
-// ==ClosureCompiler==
-// @compilation_level ADVANCED_OPTIMIZATIONS
-// @output_file_name mixpanel-2.7.min.js
-// ==/ClosureCompiler==
-
-/*
-SIMPLE STYLE GUIDE:
-
-this.x == public function
-this._x == internal - only use within this file
-this.__x == private - only use within the class
-
-Globals should be all caps
-*/
+import bind from "lodash/bind";
+import each from "lodash/each";
+import escape from "lodash/escape";
+import extend from "lodash/extend";
+import isArray from "lodash/isArray";
+import isFunction from "lodash/isFunction";
+import toArray from "lodash/toArray";
+import identity from "lodash/identity";
+import includes from "lodash/includes";
+import isObject from "lodash/isObject";
+import isUndefined from "lodash/isUndefined";
+import isString from "lodash/isString";
+import isDate from "lodash/isDate";
+import isNumber from "lodash/isNumber";
 
 var LIB_VERSION = '2.7.7';
 
@@ -132,112 +132,12 @@ var   _ = {}
         nativeIsArray = Array.isArray,
         breaker = {};
 
-    _.bind = function (func, context) {
-        var args, bound;
-        if (nativeBind && func.bind === nativeBind) return nativeBind.apply(func, slice.call(arguments, 1));
-        if (!_.isFunction(func)) throw new TypeError;
-        args = slice.call(arguments, 2);
-        return bound = function() {
-            if (!(this instanceof bound)) return func.apply(context, args.concat(slice.call(arguments)));
-            ctor.prototype = func.prototype;
-            var self = new ctor;
-            ctor.prototype = null;
-            var result = func.apply(self, args.concat(slice.call(arguments)));
-            if (Object(result) === result) return result;
-            return self;
-        };
-    };
-
     _.bind_instance_methods = function(obj) {
         for (var func in obj) {
             if (typeof(obj[func]) === 'function') {
-                obj[func] = _.bind(obj[func], obj);
+                obj[func] = bind(obj[func], obj);
             }
         }
-    };
-
-    /**
-     * @param {*=} obj
-     * @param {function(...[*])=} iterator
-     * @param {Object=} context
-     */
-    var each = _.each = function(obj, iterator, context) {
-        if (obj == null) return;
-        if (nativeForEach && obj.forEach === nativeForEach) {
-            obj.forEach(iterator, context);
-        } else if (obj.length === +obj.length) {
-            for (var i = 0, l = obj.length; i < l; i++) {
-                if (i in obj && iterator.call(context, obj[i], i, obj) === breaker) return;
-            }
-        } else {
-            for (var key in obj) {
-                if (hasOwnProperty.call(obj, key)) {
-                    if (iterator.call(context, obj[key], key, obj) === breaker) return;
-                }
-            }
-        }
-    };
-
-    _.escapeHTML = function(s) {
-        var escaped = s;
-        if (escaped && _.isString(escaped)) {
-            escaped = escaped
-                .replace(/&/g, '&amp;')
-                .replace(/</g, '&lt;')
-                .replace(/>/g, '&gt;')
-                .replace(/"/g, '&quot;')
-                .replace(/'/g, '&#039;');
-        }
-        return escaped;
-    };
-
-    _.extend = function(obj) {
-        each(slice.call(arguments, 1), function(source) {
-            for (var prop in source) {
-                if (source[prop] !== void 0) obj[prop] = source[prop];
-            }
-        });
-        return obj;
-    };
-
-    _.isArray = nativeIsArray || function(obj) {
-        return toString.call(obj) === '[object Array]';
-    };
-
-    // from a comment on http://dbj.org/dbj/?p=286
-    // fails on only one very rare and deliberate custom object:
-    // var bomb = { toString : undefined, valueOf: function(o) { return "function BOMBA!"; }};
-    _.isFunction = function (f) {
-        try {
-            return /^\s*\bfunction\b/.test(f);
-        } catch (x) {
-            return false;
-        }
-    };
-
-    _.isArguments = function(obj) {
-        return !!(obj && hasOwnProperty.call(obj, 'callee'));
-    };
-
-    _.toArray = function(iterable) {
-        if (!iterable)                return [];
-        if (iterable.toArray)         return iterable.toArray();
-        if (_.isArray(iterable))      return slice.call(iterable);
-        if (_.isArguments(iterable))  return slice.call(iterable);
-        return _.values(iterable);
-    };
-
-    _.values = function(obj) {
-        var results = [];
-        if (obj == null) return results;
-        each(obj, function(value) {
-            results[results.length] = value;
-        });
-        return results;
-    };
-
-    _.identity = function(value) {
-        return value;
     };
 
     _.include = function(obj, target) {
@@ -250,9 +150,6 @@ var   _ = {}
         return found;
     };
 
-    _.includes = function(str, needle) {
-        return str.indexOf(needle) !== -1;
-    };
 
 })();
 
@@ -264,12 +161,8 @@ _.inherit = function(subclass, superclass) {
     return subclass;
 };
 
-_.isObject = function(obj) {
-    return (obj === Object(obj) && !_.isArray(obj));
-};
-
 _.isEmptyObject = function(obj) {
-    if (_.isObject(obj)) {
+    if (isObject(obj)) {
         for (var key in obj) {
             if (hasOwnProperty.call(obj, key)) {
                 return false;
@@ -280,27 +173,11 @@ _.isEmptyObject = function(obj) {
     return false;
 };
 
-_.isUndefined = function(obj) {
-    return obj === void 0;
-};
-
-_.isString = function(obj) {
-    return toString.call(obj) == '[object String]';
-};
-
-_.isDate = function(obj) {
-    return toString.call(obj) == '[object Date]';
-};
-
-_.isNumber = function(obj) {
-    return toString.call(obj) == '[object Number]';
-};
-
 _.encodeDates = function(obj) {
-    _.each(obj, function(v, k) {
-        if (_.isDate(v)) {
+    each(obj, function(v, k) {
+        if (isDate(v)) {
             obj[k] = _.formatDate(v);
-        } else if (_.isObject(v)) {
+        } else if (isObject(v)) {
             obj[k] = _.encodeDates(v); // recurse
         }
     });
@@ -336,8 +213,8 @@ _.safewrap_class = function(klass, functions) {
 
 _.strip_empty_properties = function(p) {
     var ret = {};
-    _.each(p, function(v, k) {
-        if (_.isString(v) && v.length > 0) { ret[k] = v; }
+    each(p, function(v, k) {
+        if (isString(v) && v.length > 0) { ret[k] = v; }
     });
     return ret;
 };
@@ -352,14 +229,14 @@ _.truncate = function(obj, length) {
 
     if (typeof(obj) === "string") {
         ret = obj.slice(0, length);
-    } else if (_.isArray(obj)) {
+    } else if (isArray(obj)) {
         ret = [];
-        _.each(obj, function(val) {
+        each(obj, function(val) {
             ret.push(_.truncate(val, length));
         });
-    } else if (_.isObject(obj)) {
+    } else if (isObject(obj)) {
         ret = {};
-        _.each(obj, function(val, key) {
+        each(obj, function(val, key) {
             ret[key] = _.truncate(val, length);
         });
     } else {
@@ -367,403 +244,6 @@ _.truncate = function(obj, length) {
     }
 
     return ret;
-};
-
-_.JSONEncode = (function() {
-    return function(mixed_val) {
-        var indent;
-        var value = mixed_val;
-        var i;
-
-        var quote = function (string) {
-            var escapable = /[\\\"\x00-\x1f\x7f-\x9f\u00ad\u0600-\u0604\u070f\u17b4\u17b5\u200c-\u200f\u2028-\u202f\u2060-\u206f\ufeff\ufff0-\uffff]/g;
-            var meta = {    // table of character substitutions
-                '\b': '\\b',
-                '\t': '\\t',
-                '\n': '\\n',
-                '\f': '\\f',
-                '\r': '\\r',
-                '"' : '\\"',
-                '\\': '\\\\'
-            };
-
-            escapable.lastIndex = 0;
-            return escapable.test(string) ?
-            '"' + string.replace(escapable, function (a) {
-                var c = meta[a];
-                return typeof c === 'string' ? c :
-                '\\u' + ('0000' + a.charCodeAt(0).toString(16)).slice(-4);
-            }) + '"' :
-            '"' + string + '"';
-        };
-
-        var str = function(key, holder) {
-            var gap = '';
-            var indent = '    ';
-            var i = 0;          // The loop counter.
-            var k = '';          // The member key.
-            var v = '';          // The member value.
-            var length = 0;
-            var mind = gap;
-            var partial = [];
-            var value = holder[key];
-
-            // If the value has a toJSON method, call it to obtain a replacement value.
-            if (value && typeof value === 'object' &&
-                typeof value.toJSON === 'function') {
-                value = value.toJSON(key);
-            }
-
-            // What happens next depends on the value's type.
-            switch (typeof value) {
-                case 'string':
-                    return quote(value);
-
-                case 'number':
-                    // JSON numbers must be finite. Encode non-finite numbers as null.
-                    return isFinite(value) ? String(value) : 'null';
-
-                case 'boolean':
-                case 'null':
-                    // If the value is a boolean or null, convert it to a string. Note:
-                    // typeof null does not produce 'null'. The case is included here in
-                    // the remote chance that this gets fixed someday.
-
-                    return String(value);
-
-                case 'object':
-                    // If the type is 'object', we might be dealing with an object or an array or
-                    // null.
-                    // Due to a specification blunder in ECMAScript, typeof null is 'object',
-                    // so watch out for that case.
-                    if (!value) {
-                        return 'null';
-                    }
-
-                    // Make an array to hold the partial results of stringifying this object value.
-                    gap += indent;
-                    partial = [];
-
-                    // Is the value an array?
-                    if (toString.apply(value) === '[object Array]') {
-                        // The value is an array. Stringify every element. Use null as a placeholder
-                        // for non-JSON values.
-
-                        length = value.length;
-                        for (i = 0; i < length; i += 1) {
-                            partial[i] = str(i, value) || 'null';
-                        }
-
-                        // Join all of the elements together, separated with commas, and wrap them in
-                        // brackets.
-                        v = partial.length === 0 ? '[]' :
-                        gap ? '[\n' + gap +
-                        partial.join(',\n' + gap) + '\n' +
-                        mind + ']' :
-                        '[' + partial.join(',') + ']';
-                        gap = mind;
-                        return v;
-                    }
-
-                    // Iterate through all of the keys in the object.
-                    for (k in value) {
-                        if (hasOwnProperty.call(value, k)) {
-                            v = str(k, value);
-                            if (v) {
-                                partial.push(quote(k) + (gap ? ': ' : ':') + v);
-                            }
-                        }
-                    }
-
-                    // Join all of the member texts together, separated with commas,
-                    // and wrap them in braces.
-                    v = partial.length === 0 ? '{}' :
-                    gap ? '{' + partial.join(',') + '' +
-                    mind + '}' : '{' + partial.join(',') + '}';
-                    gap = mind;
-                    return v;
-            }
-        };
-
-        // Make a fake root object containing our value under the key of ''.
-        // Return the result of stringifying the value.
-        return str('', {
-            '': value
-        });
-    };
-})();
-
-_.JSONDecode = (function() { // https://github.com/douglascrockford/JSON-js/blob/master/json_parse.js
-    var at,     // The index of the current character
-        ch,     // The current character
-        escapee = {
-            '"':  '"',
-            '\\': '\\',
-            '/':  '/',
-            'b':  '\b',
-            'f':  '\f',
-            'n':  '\n',
-            'r':  '\r',
-            't':  '\t'
-        },
-        text,
-        error = function (m) {
-            throw {
-                name:    'SyntaxError',
-                message: m,
-                at:      at,
-                text:    text
-            };
-        },
-        next = function (c) {
-            // If a c parameter is provided, verify that it matches the current character.
-            if (c && c !== ch) {
-                error("Expected '" + c + "' instead of '" + ch + "'");
-            }
-            // Get the next character. When there are no more characters,
-            // return the empty string.
-            ch = text.charAt(at);
-            at += 1;
-            return ch;
-        },
-        number = function () {
-            // Parse a number value.
-            var number,
-                string = '';
-
-            if (ch === '-') {
-                string = '-';
-                next('-');
-            }
-            while (ch >= '0' && ch <= '9') {
-                string += ch;
-                next();
-            }
-            if (ch === '.') {
-                string += '.';
-                while (next() && ch >= '0' && ch <= '9') {
-                    string += ch;
-                }
-            }
-            if (ch === 'e' || ch === 'E') {
-                string += ch;
-                next();
-                if (ch === '-' || ch === '+') {
-                    string += ch;
-                    next();
-                }
-                while (ch >= '0' && ch <= '9') {
-                    string += ch;
-                    next();
-                }
-            }
-            number = +string;
-            if (!isFinite(number)) {
-                error("Bad number");
-            } else {
-                return number;
-            }
-        },
-
-        string = function () {
-            // Parse a string value.
-            var hex,
-                i,
-                string = '',
-                uffff;
-            // When parsing for string values, we must look for " and \ characters.
-            if (ch === '"') {
-                while (next()) {
-                    if (ch === '"') {
-                        next();
-                        return string;
-                    }
-                    if (ch === '\\') {
-                        next();
-                        if (ch === 'u') {
-                            uffff = 0;
-                            for (i = 0; i < 4; i += 1) {
-                                hex = parseInt(next(), 16);
-                                if (!isFinite(hex)) {
-                                    break;
-                                }
-                                uffff = uffff * 16 + hex;
-                            }
-                            string += String.fromCharCode(uffff);
-                        } else if (typeof escapee[ch] === 'string') {
-                            string += escapee[ch];
-                        } else {
-                            break;
-                        }
-                    } else {
-                        string += ch;
-                    }
-                }
-            }
-            error("Bad string");
-        },
-        white = function () {
-            // Skip whitespace.
-            while (ch && ch <= ' ') {
-                next();
-            }
-        },
-        word = function () {
-            // true, false, or null.
-            switch (ch) {
-            case 't':
-                next('t');
-                next('r');
-                next('u');
-                next('e');
-                return true;
-            case 'f':
-                next('f');
-                next('a');
-                next('l');
-                next('s');
-                next('e');
-                return false;
-            case 'n':
-                next('n');
-                next('u');
-                next('l');
-                next('l');
-                return null;
-            }
-            error("Unexpected '" + ch + "'");
-        },
-        value,  // Placeholder for the value function.
-        array = function () {
-            // Parse an array value.
-            var array = [];
-
-            if (ch === '[') {
-                next('[');
-                white();
-                if (ch === ']') {
-                    next(']');
-                    return array;   // empty array
-                }
-                while (ch) {
-                    array.push(value());
-                    white();
-                    if (ch === ']') {
-                        next(']');
-                        return array;
-                    }
-                    next(',');
-                    white();
-                }
-            }
-            error("Bad array");
-        },
-        object = function () {
-            // Parse an object value.
-            var key,
-                object = {};
-
-            if (ch === '{') {
-                next('{');
-                white();
-                if (ch === '}') {
-                    next('}');
-                    return object;   // empty object
-                }
-                while (ch) {
-                    key = string();
-                    white();
-                    next(':');
-                    if (Object.hasOwnProperty.call(object, key)) {
-                        error('Duplicate key "' + key + '"');
-                    }
-                    object[key] = value();
-                    white();
-                    if (ch === '}') {
-                        next('}');
-                        return object;
-                    }
-                    next(',');
-                    white();
-                }
-            }
-            error("Bad object");
-        };
-
-    value = function () {
-        // Parse a JSON value. It could be an object, an array, a string,
-        // a number, or a word.
-        white();
-        switch (ch) {
-        case '{':
-            return object();
-        case '[':
-            return array();
-        case '"':
-            return string();
-        case '-':
-            return number();
-        default:
-            return ch >= '0' && ch <= '9' ? number() : word();
-        }
-    };
-
-    // Return the json_parse function. It will have access to all of the
-    // above functions and variables.
-    return function (source) {
-        var result;
-
-        text = source;
-        at = 0;
-        ch = ' ';
-        result = value();
-        white();
-        if (ch) {
-            error("Syntax error");
-        }
-
-        return result;
-    };
-})();
-
-_.base64Encode = function(data) {
-    var b64 = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=";
-    var o1, o2, o3, h1, h2, h3, h4, bits, i = 0, ac = 0, enc="", tmp_arr = [];
-
-    if (!data) {
-        return data;
-    }
-
-    data = _.utf8Encode(data);
-
-    do { // pack three octets into four hexets
-        o1 = data.charCodeAt(i++);
-        o2 = data.charCodeAt(i++);
-        o3 = data.charCodeAt(i++);
-
-        bits = o1<<16 | o2<<8 | o3;
-
-        h1 = bits>>18 & 0x3f;
-        h2 = bits>>12 & 0x3f;
-        h3 = bits>>6 & 0x3f;
-        h4 = bits & 0x3f;
-
-        // use hexets to index into b64, and append result to encoded string
-        tmp_arr[ac++] = b64.charAt(h1) + b64.charAt(h2) + b64.charAt(h3) + b64.charAt(h4);
-    } while (i < data.length);
-
-    enc = tmp_arr.join('');
-
-    switch( data.length % 3 ){
-        case 1:
-            enc = enc.slice(0, -2) + '==';
-            break;
-        case 2:
-            enc = enc.slice(0, -1) + '=';
-            break;
-    }
-
-    return enc;
 };
 
 _.utf8Encode = function(string) {
@@ -878,11 +358,11 @@ _.isBlockedUA = function(ua) {
 _.HTTPBuildQuery = function(formdata, arg_separator) {
     var key, use_val, use_key, tmp_arr = [];
 
-    if (_.isUndefined(arg_separator)) {
+    if (isUndefined(arg_separator)) {
         arg_separator = '&';
     }
 
-    _.each(formdata, function(val, key) {
+    each(formdata, function(val, key) {
         use_val = encodeURIComponent(val.toString());
         use_key = encodeURIComponent(key);
         tmp_arr[tmp_arr.length] = use_key + '=' + use_val;
@@ -922,7 +402,7 @@ _.cookie = {
     parse: function(name) {
         var cookie;
         try {
-            cookie = _.JSONDecode(_.cookie.get(name)) || {};
+            cookie = JSON.parse(_.cookie.get(name)) || {};
         } catch (err) {}
         return cookie;
     },
@@ -972,7 +452,7 @@ _.localStorage = {
 
     parse: function(name) {
         try {
-            return _.JSONDecode(_.localStorage.get(name)) || {};
+            return JSON.parse(_.localStorage.get(name)) || {};
         } catch (err) {}
         return null;
     },
@@ -1037,7 +517,7 @@ _.register_event = (function() {
             var ret = true;
             var old_result, new_result;
 
-            if (_.isFunction(old_handlers)) {
+            if (isFunction(old_handlers)) {
                 old_result = old_handlers(event);
             }
             new_result = new_handler.call(element, event);
@@ -1156,7 +636,7 @@ _.dom_query = (function() {
                 var currentContextIndex = 0;
                 for (var k = 0; k < found.length; k++) {
                     if (found[k].className
-                        && _.isString(found[k].className)   // some SVG elements have classNames which are not strings
+                        && isString(found[k].className)   // some SVG elements have classNames which are not strings
                         && hasClass(found[k], className)
                     ) {
                         currentContext[currentContextIndex++] = found[k];
@@ -1247,7 +727,7 @@ _.info = {
         var campaign_keywords = 'utm_source utm_medium utm_campaign utm_content utm_term'.split(' ')
             , kw = ''
             , params = {};
-        _.each(campaign_keywords, function(kwkey) {
+        each(campaign_keywords, function(kwkey) {
             kw = _.getQueryParam(document.URL, kwkey);
             if (kw.length) {
                 params[kwkey] = kw;
@@ -1295,37 +775,37 @@ _.info = {
      */
     browser: function(user_agent, vendor, opera) {
         var vendor = vendor || ''; // vendor is undefined for at least IE9
-        if (opera || _.includes(user_agent, " OPR/")) {
-            if (_.includes(user_agent, "Mini")) {
+        if (opera || includes(user_agent, " OPR/")) {
+            if (includes(user_agent, "Mini")) {
                 return "Opera Mini";
             }
             return "Opera";
         } else if (/(BlackBerry|PlayBook|BB10)/i.test(user_agent)) {
             return 'BlackBerry';
-        } else if (_.includes(user_agent, "IEMobile") || _.includes(user_agent, "WPDesktop")) {
+        } else if (includes(user_agent, "IEMobile") || includes(user_agent, "WPDesktop")) {
             return "Internet Explorer Mobile";
-        } else if (_.includes(user_agent, "Edge")) {
+        } else if (includes(user_agent, "Edge")) {
             return "Microsoft Edge";
-        } else if (_.includes(user_agent, "FBIOS")) {
+        } else if (includes(user_agent, "FBIOS")) {
             return "Facebook Mobile";
-        } else if (_.includes(user_agent, "Chrome")) {
+        } else if (includes(user_agent, "Chrome")) {
             return "Chrome";
-        } else if (_.includes(user_agent, "CriOS")) {
+        } else if (includes(user_agent, "CriOS")) {
             return "Chrome iOS";
-        } else if (_.includes(vendor, "Apple")) {
-            if (_.includes(user_agent, "Mobile")) {
+        } else if (includes(vendor, "Apple")) {
+            if (includes(user_agent, "Mobile")) {
                 return "Mobile Safari";
             }
             return "Safari";
-        } else if (_.includes(user_agent, "Android")) {
+        } else if (includes(user_agent, "Android")) {
             return "Android Mobile";
-        } else if (_.includes(user_agent, "Konqueror")) {
+        } else if (includes(user_agent, "Konqueror")) {
             return "Konqueror";
-        } else if (_.includes(user_agent, "Firefox")) {
+        } else if (includes(user_agent, "Firefox")) {
             return "Firefox";
-        } else if (_.includes(user_agent, "MSIE") || _.includes(user_agent, "Trident/")) {
+        } else if (includes(user_agent, "MSIE") || includes(user_agent, "Trident/")) {
             return "Internet Explorer";
-        } else if (_.includes(user_agent, "Gecko")) {
+        } else if (includes(user_agent, "Gecko")) {
             return "Mozilla";
         } else {
             return "";
@@ -1412,7 +892,7 @@ _.info = {
     },
 
     properties: function() {
-        return _.extend(_.strip_empty_properties({
+        return extend(_.strip_empty_properties({
             '$os': _.info.os(),
             '$browser': _.info.browser(userAgent, navigator.vendor, window.opera),
             '$referrer': document.referrer,
@@ -1429,7 +909,7 @@ _.info = {
     },
 
     people_properties: function() {
-        return _.extend(_.strip_empty_properties({
+        return extend(_.strip_empty_properties({
             '$os': _.info.os(),
             '$browser': _.info.browser(userAgent, navigator.vendor, window.opera)
         }), {
@@ -1451,11 +931,11 @@ _.info = {
 var console = {
     /** @type {function(...[*])} */
     log: function() {
-        if (DEBUG && !_.isUndefined(windowConsole) && windowConsole) {
+        if (DEBUG && !isUndefined(windowConsole) && windowConsole) {
             try {
                 windowConsole.log.apply(windowConsole, arguments);
             } catch(err) {
-                _.each(arguments, function(arg) {
+                each(arguments, function(arg) {
                     windowConsole.log(arg);
                 });
             }
@@ -1463,12 +943,12 @@ var console = {
     },
     /** @type {function(...[*])} */
     error: function() {
-        if (DEBUG && !_.isUndefined(windowConsole) && windowConsole) {
+        if (DEBUG && !isUndefined(windowConsole) && windowConsole) {
             var args = ["Mixpanel error:"].concat(_.toArray(arguments));
             try {
                 windowConsole.error.apply(windowConsole, args);
             } catch(err) {
-                _.each(args, function(arg) {
+                each(args, function(arg) {
                     windowConsole.error(arg);
                 });
             }
@@ -1476,12 +956,12 @@ var console = {
     },
     /** @type {function(...[*])} */
     critical: function() {
-        if (!_.isUndefined(windowConsole) && windowConsole) {
+        if (!isUndefined(windowConsole) && windowConsole) {
             var args = ["Mixpanel error:"].concat(_.toArray(arguments));
             try {
                 windowConsole.error.apply(windowConsole, args);
             } catch(err) {
-                _.each(args, function(arg) {
+                each(args, function(arg) {
                     windowConsole.error(arg);
                 });
             }
@@ -1520,7 +1000,7 @@ DomTracker.prototype.track = function(query, event_name, properties, user_callba
         return;
     }
 
-    _.each(elements, function(element) {
+    each(elements, function(element) {
         _.register_event(element, this.override_event, function(e) {
             var options = {}
                 , props = that.create_properties(properties, this)
@@ -1570,7 +1050,7 @@ DomTracker.prototype.create_properties = function(properties, element) {
     if (typeof(properties) === "function") {
         props = properties(element);
     } else {
-        props = _.extend({}, properties);
+        props = extend({}, properties);
     }
 
     return props;
@@ -1690,7 +1170,7 @@ var MixpanelPersistence = function(config) {
 MixpanelPersistence.prototype.properties = function() {
     var p = {};
     // Filter out reserved properties
-    _.each(this['props'], function(v, k) {
+    each(this['props'], function(v, k) {
         if (!_.include(RESERVED_PROPERTIES, k)) {
             p[k] = v;
         }
@@ -1704,7 +1184,7 @@ MixpanelPersistence.prototype.load = function() {
     var entry = this.storage.parse(this.name);
 
     if (entry) {
-        this['props'] = _.extend({}, entry);
+        this['props'] = extend({}, entry);
     }
 };
 
@@ -1727,7 +1207,7 @@ MixpanelPersistence.prototype.upgrade = function(config) {
         this.storage.remove(old_cookie_name, true);
 
         if (old_cookie) {
-            this['props'] = _.extend(
+            this['props'] = extend(
                 this['props'],
                 old_cookie['all'],
                 old_cookie['events']
@@ -1768,7 +1248,7 @@ MixpanelPersistence.prototype.save = function() {
     this._expire_notification_campaigns();
     this.storage.set(
         this.name,
-        _.JSONEncode(this['props']),
+        JSON.stringify(this['props']),
         this.expire_days,
         this.cross_subdomain,
         this.secure
@@ -1794,11 +1274,11 @@ MixpanelPersistence.prototype.clear = function() {
  * @param {number=} days
  */
 MixpanelPersistence.prototype.register_once = function(props, default_value, days) {
-    if (_.isObject(props)) {
+    if (isObject(props)) {
         if (typeof(default_value) === 'undefined') { default_value = "None"; }
         this.expire_days = (typeof(days) === 'undefined') ? this.default_expiry : days;
 
-        _.each(props, function(val, prop) {
+        each(props, function(val, prop) {
             if (!this['props'][prop] || this['props'][prop] === default_value) {
                 this['props'][prop] = val;
             }
@@ -1816,10 +1296,10 @@ MixpanelPersistence.prototype.register_once = function(props, default_value, day
  * @param {number=} days
  */
 MixpanelPersistence.prototype.register = function(props, days) {
-    if (_.isObject(props)) {
+    if (isObject(props)) {
         this.expire_days = (typeof(days) === 'undefined') ? this.default_expiry : days;
 
-        _.extend(this['props'], props);
+        extend(this['props'], props);
 
         this.save();
 
@@ -1882,7 +1362,7 @@ MixpanelPersistence.prototype.get_referrer_info = function() {
 // does not override any properties defined in both
 // returns the passed in object
 MixpanelPersistence.prototype.safe_merge = function(props) {
-    _.each(this['props'], function(val, prop) {
+    each(this['props'], function(val, prop) {
         if (!(prop in props)) {
             props[prop] = val;
         }
@@ -1936,7 +1416,7 @@ MixpanelPersistence.prototype._add_to_people_queue = function(queue, data) {
 
     if (q_key === SET_QUEUE_KEY) {
         // Update the set queue - we can override any existing values
-        _.extend(set_q, q_data);
+        extend(set_q, q_data);
         // if there was a pending increment, override it
         // with the set.
         this._pop_from_people_queue(ADD_ACTION, q_data);
@@ -1945,13 +1425,13 @@ MixpanelPersistence.prototype._add_to_people_queue = function(queue, data) {
         this._pop_from_people_queue(UNION_ACTION, q_data);
     } else if (q_key === SET_ONCE_QUEUE_KEY) {
         // only queue the data if there is not already a set_once call for it.
-        _.each(q_data, function(v, k) {
+        each(q_data, function(v, k) {
             if (!(k in set_once_q)) {
                 set_once_q[k] = v;
             }
         });
     } else if (q_key === ADD_QUEUE_KEY) {
-        _.each(q_data, function(v, k) {
+        each(q_data, function(v, k) {
             // If it exists in the set queue, increment
             // the value
             if (k in set_q) {
@@ -1966,8 +1446,8 @@ MixpanelPersistence.prototype._add_to_people_queue = function(queue, data) {
             }
         }, this);
     } else if (q_key === UNION_QUEUE_KEY) {
-        _.each(q_data, function(v, k) {
-            if (_.isArray(v)) {
+        each(q_data, function(v, k) {
+            if (isArray(v)) {
                 if (!(k in union_q)) {
                     union_q[k] = [];
                 }
@@ -1987,8 +1467,8 @@ MixpanelPersistence.prototype._add_to_people_queue = function(queue, data) {
 
 MixpanelPersistence.prototype._pop_from_people_queue = function(queue, data) {
     var q = this._get_queue(queue);
-    if (!_.isUndefined(q)) {
-        _.each(data, function(v, k) {
+    if (!isUndefined(q)) {
+        each(data, function(v, k) {
             delete q[k];
         }, this);
 
@@ -2017,7 +1497,7 @@ MixpanelPersistence.prototype._get_queue = function(queue) {
 };
 MixpanelPersistence.prototype._get_or_create_queue = function(queue, default_val) {
     var key = this._get_queue_key(queue),
-        default_val = _.isUndefined(default_val) ? {} : default_val;
+        default_val = isUndefined(default_val) ? {} : default_val;
 
     return this['props'][key] || (this['props'][key] = default_val);
 };
@@ -2032,7 +1512,7 @@ MixpanelPersistence.prototype.set_event_timer = function(event_name, timestamp) 
 MixpanelPersistence.prototype.remove_event_timer = function(event_name) {
     var timers = this['props'][EVENT_TIMERS_KEY] || {};
     var timestamp = timers[event_name];
-    if (!_.isUndefined(timestamp)) {
+    if (!isUndefined(timestamp)) {
         delete this['props'][EVENT_TIMERS_KEY][event_name];
         this.save();
     }
@@ -2054,7 +1534,7 @@ var create_mplib = function(token, config, name) {
     if (target && init_type === INIT_MODULE) {
         instance = target;
     } else {
-        if (target && !_.isArray(target)) {
+        if (target && !isArray(target)) {
             console.error("You have already initialized " + name);
             return;
         }
@@ -2072,7 +1552,7 @@ var create_mplib = function(token, config, name) {
 
     // if target is not defined, we called init after the lib already
     // loaded, so there won't be an array of things to execute
-    if (!_.isUndefined(target) && _.isArray(target)) {
+    if (!isUndefined(target) && isArray(target)) {
         // Crunch through the people queue first - we queue this data up &
         // flush on identify, so it's better to do all these operations first
         instance._execute_array.call(instance['people'], target['people']);
@@ -2113,7 +1593,7 @@ var MixpanelLib = function() { };
  * @param {String} [name]    The name for the new mixpanel instance that you want created
  */
 MixpanelLib.prototype.init = function (token, config, name) {
-    if (_.isUndefined(name)) {
+    if (isUndefined(name)) {
         console.error("You must name your new library: init(token, config, name)");
         return;
     }
@@ -2140,7 +1620,7 @@ MixpanelLib.prototype._init = function(token, config, name) {
     this['__loaded'] = true;
     this['config'] = {};
 
-    this.set_config(_.extend({}, DEFAULT_CONFIG, config, {
+    this.set_config(extend({}, DEFAULT_CONFIG, config, {
           "name": name
         , "token": token
         , "callback_fn": ((name === PRIMARY_INSTANCE_NAME) ? name : PRIMARY_INSTANCE_NAME + '.' + name) + '._jsc'
@@ -2173,10 +1653,10 @@ MixpanelLib.prototype._loaded = function() {
 };
 
 MixpanelLib.prototype._dom_loaded = function() {
-    _.each(this.__dom_loaded_queue, function(item) {
+    each(this.__dom_loaded_queue, function(item) {
         this._track_dom.apply(this, item);
     }, this);
-    _.each(this.__request_queue, function(item) {
+    each(this.__request_queue, function(item) {
         this._send_request.apply(this, item);
     }, this);
     delete this.__dom_loaded_queue;
@@ -2208,7 +1688,7 @@ MixpanelLib.prototype._track_dom = function(DomClass, args) {
  * callback GET param.
  */
 MixpanelLib.prototype._prepare_callback = function(callback, data) {
-    if (_.isUndefined(callback)) {
+    if (isUndefined(callback)) {
         return null;
     }
 
@@ -2275,7 +1755,7 @@ MixpanelLib.prototype._send_request = function(url, data, callback) {
             if (req.readyState === 4) { // XMLHttpRequest.DONE == 4, except in safari 4
                 if (req.status === 200) {
                     if (callback) {
-                        if (verbose_mode) { callback(_.JSONDecode(req.responseText)); }
+                        if (verbose_mode) { callback(JSON.parse(req.responseText)); }
                         else { callback(Number(req.responseText)); }
                     }
                 } else {
@@ -2314,14 +1794,14 @@ MixpanelLib.prototype._send_request = function(url, data, callback) {
  */
 MixpanelLib.prototype._execute_array = function(array) {
     var fn_name, alias_calls = [], other_calls = [], tracking_calls = [];
-    _.each(array, function(item) {
+    each(array, function(item) {
         if (item) {
             fn_name = item[0];
             if (typeof(item) === "function") {
                 item.call(this);
-            } else if (_.isArray(item) && fn_name === 'alias') {
+            } else if (isArray(item) && fn_name === 'alias') {
                 alias_calls.push(item);
-            } else if (_.isArray(item) && fn_name.indexOf('track') != -1 && typeof(this[fn_name]) === "function") {
+            } else if (isArray(item) && fn_name.indexOf('track') != -1 && typeof(this[fn_name]) === "function") {
                 tracking_calls.push(item);
             } else {
                 other_calls.push(item);
@@ -2330,7 +1810,7 @@ MixpanelLib.prototype._execute_array = function(array) {
     }, this);
 
     var execute = function(calls, context) {
-        _.each(calls, function(item) {
+        each(calls, function(item) {
             this[item[0]].apply(this, item.slice(1));
         }, context);
     };
@@ -2391,7 +1871,7 @@ MixpanelLib.prototype.disable = function(events) {
  * @param {Function} [callback] If provided, the callback function will be called after tracking the event.
  */
 MixpanelLib.prototype.track = function(event_name, properties, callback) {
-    if (_.isUndefined(event_name)) {
+    if (isUndefined(event_name)) {
         console.error("No event name provided to mixpanel.track");
         return;
     }
@@ -2407,7 +1887,7 @@ MixpanelLib.prototype.track = function(event_name, properties, callback) {
 
     // set $duration if time_event was previously called for this event
     var start_timestamp = this['persistence'].remove_event_timer(event_name);
-    if (!_.isUndefined(start_timestamp)) {
+    if (!isUndefined(start_timestamp)) {
         var duration_in_ms = new Date().getTime() - start_timestamp;
         properties['$duration'] = parseFloat((duration_in_ms / 1000).toFixed(3));
     }
@@ -2423,7 +1903,7 @@ MixpanelLib.prototype.track = function(event_name, properties, callback) {
     // properties object by passing in a new object
 
     // update properties with pageview info and super-properties
-    properties = _.extend(
+    properties = extend(
         {}
         , _.info.properties()
         , this['persistence'].properties()
@@ -2432,7 +1912,7 @@ MixpanelLib.prototype.track = function(event_name, properties, callback) {
 
     try {
         if (this.mp_counts && event_name !== "mp_page_view" && event_name !== "$create_alias") {
-            properties = _.extend({}, properties, this.mp_counts);
+            properties = extend({}, properties, this.mp_counts);
             this.mp_counts = {};
             this.mp_counts['$__c'] = 0;
 
@@ -2444,8 +1924,8 @@ MixpanelLib.prototype.track = function(event_name, properties, callback) {
     }
 
     var property_blacklist = this.get_config('property_blacklist');
-    if (_.isArray(property_blacklist)) {
-        _.each(property_blacklist, function(blacklisted_prop) {
+    if (isArray(property_blacklist)) {
+        each(property_blacklist, function(blacklisted_prop) {
             delete properties[blacklisted_prop];
         });
     } else {
@@ -2458,8 +1938,8 @@ MixpanelLib.prototype.track = function(event_name, properties, callback) {
     };
 
     var truncated_data  = _.truncate(data, 255)
-        , json_data     = _.JSONEncode(truncated_data)
-        , encoded_data  = _.base64Encode(json_data);
+        , json_data     = JSON.stringify(truncated_data)
+        , encoded_data  = window.btoa(json_data);
 
     console.log("MIXPANEL REQUEST:");
     console.log(truncated_data);
@@ -2482,7 +1962,7 @@ MixpanelLib.prototype.track = function(event_name, properties, callback) {
  * @api private
  */
 MixpanelLib.prototype.track_pageview = function(page) {
-    if (_.isUndefined(page)) { page = document.location.href; }
+    if (isUndefined(page)) { page = document.location.href; }
     this.track("mp_page_view", _.info.pageviewInfo(page));
 };
 
@@ -2567,7 +2047,7 @@ MixpanelLib.prototype.track_forms = function() {
  * @param {String} event_name The name of the event.
  */
 MixpanelLib.prototype.time_event = function(event_name) {
-    if (_.isUndefined(event_name)) {
+    if (isUndefined(event_name)) {
         console.error("No event name provided to mixpanel.time_event");
         return;
     }
@@ -2734,7 +2214,7 @@ MixpanelLib.prototype.alias = function(alias, original) {
     }
 
     var _this = this;
-    if (_.isUndefined(original)) {
+    if (isUndefined(original)) {
         original = this.get_distinct_id();
     }
     if (alias !== original) {
@@ -2817,8 +2297,8 @@ MixpanelLib.prototype.name_tag = function(name_tag) {
  * @param {Object} config A dictionary of new configuration values to update
  */
 MixpanelLib.prototype.set_config = function(config) {
-    if (_.isObject(config)) {
-        _.extend(this['config'], config);
+    if (isObject(config)) {
+        extend(this['config'], config);
 
         if (!this.get_config('persistence_name')) {
             this['config']['persistence_name'] = this['config']['cookie_name'];
@@ -2940,8 +2420,8 @@ MixpanelPeople.prototype._init = function(mixpanel_instance) {
 MixpanelPeople.prototype.set = function(prop, to, callback) {
     var data = {};
     var $set = {};
-    if (_.isObject(prop)) {
-        _.each(prop, function(v, k) {
+    if (isObject(prop)) {
+        each(prop, function(v, k) {
             if (!this._is_reserved_property(k)) {
                 $set[k] = v;
             }
@@ -2957,7 +2437,7 @@ MixpanelPeople.prototype.set = function(prop, to, callback) {
     }
 
     // update $set object with default people properties
-    $set = _.extend({}
+    $set = extend({}
         , _.info.people_properties()
         , this._mixpanel['persistence'].get_referrer_info()
         , $set
@@ -2992,8 +2472,8 @@ MixpanelPeople.prototype.set = function(prop, to, callback) {
 MixpanelPeople.prototype.set_once = function(prop, to, callback) {
     var data = {};
     var $set_once = {};
-    if (_.isObject(prop)) {
-        _.each(prop, function(v, k) {
+    if (isObject(prop)) {
+        each(prop, function(v, k) {
             if (!this._is_reserved_property(k)) {
                 $set_once[k] = v;
             }
@@ -3034,8 +2514,8 @@ MixpanelPeople.prototype.set_once = function(prop, to, callback) {
 MixpanelPeople.prototype.increment = function(prop, by, callback) {
     var data = {};
     var $add = {};
-    if (_.isObject(prop)) {
-        _.each(prop, function(v, k) {
+    if (isObject(prop)) {
+        each(prop, function(v, k) {
             if (!this._is_reserved_property(k)) {
                 if (isNaN(parseFloat(v))) {
                     console.error("Invalid increment value passed to mixpanel.people.increment - must be a number");
@@ -3049,7 +2529,7 @@ MixpanelPeople.prototype.increment = function(prop, by, callback) {
     } else {
         // convenience: mixpanel.people.increment('property'); will
         // increment 'property' by 1
-        if (_.isUndefined(by)) {
+        if (isUndefined(by)) {
             by = 1;
         }
         $add[prop] = by;
@@ -3081,8 +2561,8 @@ MixpanelPeople.prototype.increment = function(prop, by, callback) {
 MixpanelPeople.prototype.append = function(list_name, value, callback) {
     var data = {};
     var $append = {};
-    if (_.isObject(list_name)) {
-        _.each(list_name, function(v, k) {
+    if (isObject(list_name)) {
+        each(list_name, function(v, k) {
             if (!this._is_reserved_property(k)) {
                 $append[k] = v;
             }
@@ -3125,15 +2605,15 @@ MixpanelPeople.prototype.append = function(list_name, value, callback) {
 MixpanelPeople.prototype.union = function(list_name, values, callback) {
     var data = {};
     var $union = {};
-    if (_.isObject(list_name)) {
-        _.each(list_name, function(v, k) {
+    if (isObject(list_name)) {
+        each(list_name, function(v, k) {
             if (!this._is_reserved_property(k)) {
-                $union[k] = _.isArray(v) ? v : [v];
+                $union[k] = isArray(v) ? v : [v];
             }
         }, this);
         callback = values;
     } else {
-        $union[list_name] = _.isArray(values) ? values : [values];
+        $union[list_name] = isArray(values) ? values : [values];
     }
     data[UNION_ACTION] = $union;
 
@@ -3160,7 +2640,7 @@ MixpanelPeople.prototype.union = function(list_name, values, callback) {
  * @param {Function} [callback] If provided, the callback will be called when the server responds
  */
 MixpanelPeople.prototype.track_charge = function(amount, properties, callback) {
-    if (!_.isNumber(amount)) {
+    if (!isNumber(amount)) {
         amount = parseFloat(amount);
         if (isNaN(amount)) {
             console.error("Invalid value passed to mixpanel.people.track_charge - must be a number");
@@ -3168,7 +2648,7 @@ MixpanelPeople.prototype.track_charge = function(amount, properties, callback) {
         }
     }
 
-    return this.append('$transactions', _.extend({
+    return this.append('$transactions', extend({
         '$amount': amount
     }, properties), callback);
 };
@@ -3216,12 +2696,12 @@ MixpanelPeople.prototype._send_request = function(data, callback) {
 
     var date_encoded_data = _.encodeDates(data)
       , truncated_data    = _.truncate(date_encoded_data, 255)
-      , json_data         = _.JSONEncode(date_encoded_data)
-      , encoded_data      = _.base64Encode(json_data);
+      , json_data         = JSON.stringify(date_encoded_data)
+      , encoded_data      = window.btoa(json_data);
 
     if (!this._identify_called()) {
         this._enqueue(data);
-        if (!_.isUndefined(callback)) {
+        if (!isUndefined(callback)) {
             if (this._get_config('verbose')) {
                 callback({ status: -1, error: null });
             } else {
@@ -3272,59 +2752,59 @@ MixpanelPeople.prototype._enqueue = function(data) {
 // and there are network level race conditions anyway
 MixpanelPeople.prototype._flush = function(_set_callback, _add_callback, _append_callback, _set_once_callback, _union_callback) {
     var _this = this,
-        $set_queue = _.extend({}, this._mixpanel['persistence']._get_queue(SET_ACTION)),
-        $set_once_queue = _.extend({}, this._mixpanel['persistence']._get_queue(SET_ONCE_ACTION)),
-        $add_queue = _.extend({}, this._mixpanel['persistence']._get_queue(ADD_ACTION)),
+        $set_queue = extend({}, this._mixpanel['persistence']._get_queue(SET_ACTION)),
+        $set_once_queue = extend({}, this._mixpanel['persistence']._get_queue(SET_ONCE_ACTION)),
+        $add_queue = extend({}, this._mixpanel['persistence']._get_queue(ADD_ACTION)),
         $append_queue = this._mixpanel['persistence']._get_queue(APPEND_ACTION),
-        $union_queue = _.extend({}, this._mixpanel['persistence']._get_queue(UNION_ACTION));
+        $union_queue = extend({}, this._mixpanel['persistence']._get_queue(UNION_ACTION));
 
-    if (!_.isUndefined($set_queue) && _.isObject($set_queue) && !_.isEmptyObject($set_queue)) {
+    if (!isUndefined($set_queue) && isObject($set_queue) && !_.isEmptyObject($set_queue)) {
         _this._mixpanel['persistence']._pop_from_people_queue(SET_ACTION, $set_queue);
         this.set($set_queue, function(response, data) {
             // on bad response, we want to add it back to the queue
             if (response == 0) {
                 _this._mixpanel['persistence']._add_to_people_queue(SET_ACTION, $set_queue);
             }
-            if (!_.isUndefined(_set_callback)) {
+            if (!isUndefined(_set_callback)) {
                 _set_callback(response, data);
             }
         });
     }
 
-    if (!_.isUndefined($set_once_queue) && _.isObject($set_once_queue) && !_.isEmptyObject($set_once_queue)) {
+    if (!isUndefined($set_once_queue) && isObject($set_once_queue) && !_.isEmptyObject($set_once_queue)) {
         _this._mixpanel['persistence']._pop_from_people_queue(SET_ONCE_ACTION, $set_once_queue);
         this.set_once($set_once_queue, function(response, data) {
             // on bad response, we want to add it back to the queue
             if (response == 0) {
                 _this._mixpanel['persistence']._add_to_people_queue(SET_ONCE_ACTION, $set_once_queue);
             }
-            if (!_.isUndefined(_set_once_callback)) {
+            if (!isUndefined(_set_once_callback)) {
                 _set_once_callback(response, data);
             }
         });
     }
 
-    if (!_.isUndefined($add_queue) && _.isObject($add_queue) && !_.isEmptyObject($add_queue)) {
+    if (!isUndefined($add_queue) && isObject($add_queue) && !_.isEmptyObject($add_queue)) {
         _this._mixpanel['persistence']._pop_from_people_queue(ADD_ACTION, $add_queue);
         this.increment($add_queue, function(response, data) {
             // on bad response, we want to add it back to the queue
             if (response == 0) {
                 _this._mixpanel['persistence']._add_to_people_queue(ADD_ACTION, $add_queue);
             }
-            if (!_.isUndefined(_add_callback)) {
+            if (!isUndefined(_add_callback)) {
                 _add_callback(response, data);
             }
         });
     }
 
-    if (!_.isUndefined($union_queue) && _.isObject($union_queue) && !_.isEmptyObject($union_queue)) {
+    if (!isUndefined($union_queue) && isObject($union_queue) && !_.isEmptyObject($union_queue)) {
         _this._mixpanel['persistence']._pop_from_people_queue(UNION_ACTION, $union_queue);
         this.union($union_queue, function(response, data) {
             // on bad response, we want to add it back to the queue
             if (response == 0) {
                 _this._mixpanel['persistence']._add_to_people_queue(UNION_ACTION, $union_queue);
             }
-            if (!_.isUndefined(_union_callback)) {
+            if (!isUndefined(_union_callback)) {
                 _union_callback(response, data);
             }
         });
@@ -3332,14 +2812,14 @@ MixpanelPeople.prototype._flush = function(_set_callback, _add_callback, _append
 
     // we have to fire off each $append individually since there is
     // no concat method server side
-    if (!_.isUndefined($append_queue) && _.isArray($append_queue) && $append_queue.length) {
+    if (!isUndefined($append_queue) && isArray($append_queue) && $append_queue.length) {
         for (var i = $append_queue.length - 1; i >= 0; i--) {
             var $append_item = $append_queue.pop();
             _this.append($append_item, function(response, data) {
                 if (response == 0) {
                     _this._mixpanel['persistence']._add_to_people_queue(APPEND_ACTION, $append_item);
                 }
-                if (!_.isUndefined(_append_callback)) { _append_callback(response, data); }
+                if (!isUndefined(_append_callback)) { _append_callback(response, data); }
             });
         };
         // Save the shortened append queue
@@ -3359,18 +2839,18 @@ MixpanelLib._Notification = function(notif_data, mixpanel_instance) {
     this.mixpanel    = mixpanel_instance;
     this.persistence = this.mixpanel['persistence'];
 
-    this.campaign_id = _.escapeHTML(notif_data['id']);
-    this.message_id  = _.escapeHTML(notif_data['message_id']);
+    this.campaign_id = escape(notif_data['id']);
+    this.message_id  = escape(notif_data['message_id']);
 
-    this.body            = (_.escapeHTML(notif_data['body']) || '').replace(/\n/g, '<br/>');
-    this.cta             = _.escapeHTML(notif_data['cta']) || 'Close';
-    this.dest_url        = _.escapeHTML(notif_data['cta_url']) || null;
-    this.image_url       = _.escapeHTML(notif_data['image_url']) || null;
-    this.notif_type      = _.escapeHTML(notif_data['type']) || 'takeover';
-    this.style           = _.escapeHTML(notif_data['style']) || 'light';
-    this.thumb_image_url = _.escapeHTML(notif_data['thumb_image_url']) || null;
-    this.title           = _.escapeHTML(notif_data['title']) || '';
-    this.video_url       = _.escapeHTML(notif_data['video_url']) || null;
+    this.body            = (escape(notif_data['body']) || '').replace(/\n/g, '<br/>');
+    this.cta             = escape(notif_data['cta']) || 'Close';
+    this.dest_url        = escape(notif_data['cta_url']) || null;
+    this.image_url       = escape(notif_data['image_url']) || null;
+    this.notif_type      = escape(notif_data['type']) || 'takeover';
+    this.style           = escape(notif_data['style']) || 'light';
+    this.thumb_image_url = escape(notif_data['thumb_image_url']) || null;
+    this.title           = escape(notif_data['title']) || '';
+    this.video_url       = escape(notif_data['video_url']) || null;
     this.video_width     = MPNotif.VIDEO_WIDTH;
     this.video_height    = MPNotif.VIDEO_HEIGHT;
 
@@ -4213,7 +3693,7 @@ var MPNotif = MixpanelLib._Notification;
 
         // IE hacks
         if (this._browser_lte('ie', 8)) {
-            _.extend(notif_styles, {
+            extend(notif_styles, {
                 '* html #overlay': {
                     'position': 'absolute'
                 },
@@ -4226,7 +3706,7 @@ var MPNotif = MixpanelLib._Notification;
             });
         }
         if (this._browser_lte('ie', 7)) {
-            _.extend(notif_styles, {
+            extend(notif_styles, {
                 '#mini #body': {
                     'display': 'inline',
                     'zoom': '1',
@@ -4582,7 +4062,7 @@ var MPNotif = MixpanelLib._Notification;
     MPNotif.prototype._track_event = function(event_name, properties, cb) {
         if (this.campaign_id) {
             properties = properties || {};
-            properties = _.extend(properties, {
+            properties = extend(properties, {
                 'campaign_id':     this.campaign_id,
                 'message_id':      this.message_id,
                 'message_type':    'web_inapp',
@@ -4639,10 +4119,10 @@ var MPNotif = MixpanelLib._Notification;
 // EXPORTS (for closure compiler)
 
 // Underscore Exports
-_['toArray']            = _.toArray;
-_['isObject']           = _.isObject;
-_['JSONEncode']         = _.JSONEncode;
-_['JSONDecode']         = _.JSONDecode;
+_['toArray']            = toArray;
+_['isObject']           = isObject;
+_['JSONEncode']         = JSON.stringify;
+_['JSONDecode']         = JSON.parse;
 _['isBlockedUA']        = _.isBlockedUA;
 _['isEmptyObject']      = _.isEmptyObject;
 _['info']               = _.info;
@@ -4695,7 +4175,7 @@ _.safewrap_class(MixpanelLib, ['identify', '_check_and_handle_notifications', '_
 var instances = {};
 var extend_mp = function() {
     // add all the sub mixpanel instances
-    _.each(instances, function(instance, name) {
+    each(instances, function(instance, name) {
         if (name !== PRIMARY_INSTANCE_NAME) { mixpanel_master[name] = instance; }
     });
 
@@ -4746,7 +4226,7 @@ var add_dom_loaded_handler = function() {
         DOM_LOADED = true;
         ENQUEUE_REQUESTS = false;
 
-        _.each(instances, function(inst) {
+        each(instances, function(inst) {
             inst._dom_loaded();
         });
     }
@@ -4821,7 +4301,7 @@ export function init_from_snippet() {
     mixpanel_master = window[PRIMARY_INSTANCE_NAME];
 
     // Initialization
-    if (_.isUndefined(mixpanel_master)) {
+    if (isUndefined(mixpanel_master)) {
         // mixpanel wasn't initialized properly, report error and quit
         console.critical("'mixpanel' object not initialized. Ensure you are using the latest version of the Mixpanel JS Library along with the snippet we provide.");
         return;
@@ -4839,8 +4319,8 @@ export function init_from_snippet() {
     }
 
     // Load instances of the Mixpanel Library
-    _.each(mixpanel_master['_i'], function(item) {
-        if (item && _.isArray(item)) {
+    each(mixpanel_master['_i'], function(item) {
+        if (item && isArray(item)) {
             instances[item[item.length-1]] = create_mplib.apply(this, item);
         }
     });
@@ -4849,14 +4329,14 @@ export function init_from_snippet() {
     mixpanel_master['init']();
 
     // Fire loaded events after updating the window's mixpanel object
-    _.each(instances, function(instance) {
+    each(instances, function(instance) {
         instance._loaded();
     });
 
     add_dom_loaded_handler();
 };
 
-export function init_as_module() {
+function init_as_module() {
     init_type = INIT_MODULE;
     mixpanel_master = new MixpanelLib();
 
@@ -4866,3 +4346,5 @@ export function init_as_module() {
 
     return mixpanel_master;
 };
+
+export default init_as_module;

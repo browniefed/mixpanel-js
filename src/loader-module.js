@@ -1,5 +1,5 @@
-import { init_as_module } from './mixpanel-core';
+import init_as_module from './mixpanel-core';
 
-var mixpanel = init_as_module();
+const mixpanel = init_as_module();
 
 export default mixpanel;
